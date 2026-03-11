@@ -76,7 +76,8 @@ export default function TrackingPage() {
 
   // Connect socket and subscribe only to user's vehicles
   useEffect(() => {
-    const socket = io(window.location.origin, {
+    const wsUrl = import.meta.env.VITE_WS_URL || window.location.origin;
+    const socket = io(wsUrl, {
       path: '/socket.io',
       transports: ['websocket', 'polling'],
     });
