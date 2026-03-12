@@ -14,7 +14,6 @@ const DashboardLayout = lazy(() => import('./components/layout/DashboardLayout')
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
 const TrackingPage = lazy(() => import('./pages/tracking/TrackingPage'));
 const VehiclesPage = lazy(() => import('./pages/vehicles/VehiclesPage'));
-const DriversPage = lazy(() => import('./pages/drivers/DriversPage'));
 const DevicesPage = lazy(() => import('./pages/devices/DevicesPage'));
 const HistoryPage = lazy(() => import('./pages/history/HistoryPage'));
 const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage'));
@@ -57,7 +56,6 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="tracking" element={<TrackingPage />} />
           <Route path="vehicles" element={<VehiclesPage />} />
-          <Route path="drivers" element={<DriversPage />} />
           <Route path="devices" element={<DevicesPage />} />
           <Route path="history" element={<HistoryPage />} />
           <Route path="notifications" element={<NotificationsPage />} />

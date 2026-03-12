@@ -1,10 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MapContainer, TileLayer, Polyline, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { format } from 'date-fns';
 import { Calendar, Car, Clock, Navigation } from 'lucide-react';
 import api from '../../lib/axios';
+
+function MapResizer() {
+  const map = useMap();
+  useEffect(() => {
+    const observer = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map]);
+  return null;
+}
 
 interface GpsPoint {
   latitude: number;
@@ -179,6 +191,7 @@ export default function HistoryPage() {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
+            <MapResizer />
             {routePoints.length > 1 && (
               <Polyline positions={routePoints} color="#10b981" weight={4} opacity={0.8} />
             )}

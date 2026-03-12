@@ -46,7 +46,7 @@ const features = [
   {
     icon: BarChart3,
     title: 'Advanced Analytics',
-    desc: 'Comprehensive reports on fleet usage, fuel consumption, driver behavior, and efficiency.',
+    desc: 'Comprehensive reports on fleet usage, fuel consumption, vehicle performance, and efficiency.',
     gradient: 'from-purple-500 to-pink-500',
     bg: 'bg-purple-50 dark:bg-purple-900/20',
   },
@@ -310,7 +310,7 @@ export default function LandingPage() {
                       <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600" />
                       <span className="text-xs font-bold text-gray-700 dark:text-gray-300">TrackPro</span>
                     </div>
-                    {['Dashboard', 'Tracking', 'Vehicles', 'Drivers', 'Devices'].map((item, i) => (
+                    {['Dashboard', 'Tracking', 'Vehicles', 'Devices', 'History'].map((item, i) => (
                       <div
                         key={item}
                         className={`mb-1 rounded-lg px-2 py-1.5 text-xs ${
@@ -331,7 +331,7 @@ export default function LandingPage() {
                       {[
                         { label: 'Active Vehicles', val: '147', color: 'from-emerald-500 to-teal-500', change: '+12%' },
                         { label: 'Online Devices', val: '132', color: 'from-blue-500 to-indigo-500', change: '+8%' },
-                        { label: 'Total Drivers', val: '89', color: 'from-purple-500 to-pink-500', change: '+5%' },
+                        { label: 'Online Devices', val: '24', color: 'from-purple-500 to-pink-500', change: '+3' },
                         { label: 'Deliveries', val: '56', color: 'from-amber-500 to-orange-500', change: '+23%' },
                       ].map((s) => (
                         <div

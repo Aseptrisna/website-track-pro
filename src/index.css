@@ -1,6 +1,7 @@
 @import "tailwindcss";
+@import 'leaflet/dist/leaflet.css';
 
-@import 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+@custom-variant dark (&:where(.dark *));
 
 @theme {
   --color-primary-50: #ecfdf5;
@@ -98,6 +99,31 @@
 .delay-300 { animation-delay: 0.3s; }
 .delay-400 { animation-delay: 0.4s; }
 .delay-500 { animation-delay: 0.5s; }
+
+/* Vehicle marker styles */
+.vehicle-marker-icon {
+  background: transparent !important;
+  border: none !important;
+  transition: transform 0.3s ease;
+}
+.vehicle-marker-icon:hover {
+  transform: scale(1.15);
+}
+
+/* Leaflet popup custom styling */
+.vehicle-popup .leaflet-popup-content-wrapper {
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  padding: 0;
+  overflow: hidden;
+}
+.vehicle-popup .leaflet-popup-content {
+  margin: 8px 10px;
+  min-width: 200px;
+}
+.vehicle-popup .leaflet-popup-tip {
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.1);
+}
 
 /* Smooth scroll */
 html { scroll-behavior: smooth; }

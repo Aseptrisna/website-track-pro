@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Link2, LinkIcon, Cpu } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DataTable, { type Column } from '../../components/ui/DataTable';
 import Modal from '../../components/ui/Modal';
@@ -16,7 +16,14 @@ interface Vehicle {
   model: string;
   year: number;
   status: string;
+  device_id?: { _id: string; device_name: string; imei: string } | string | null;
   [key: string]: unknown;
+}
+
+interface DeviceOption {
+  _id: string;
+  device_name: string;
+  imei: string;
 }
 
 const vehicleTypes = ['truck', 'van', 'car', 'motorcycle', 'bus', 'pickup'];
@@ -28,6 +35,7 @@ const emptyForm = {
   brand: '',
   model: '',
   year: new Date().getFullYear(),
+  device_id: '',
 };
 
 export default function VehiclesPage() {
@@ -49,12 +57,22 @@ export default function VehiclesPage() {
     },
   });
 
+  // Fetch devices for linking dropdown
+  const { data: deviceOptions } = useQuery<DeviceOption[]>({
+    queryKey: ['devices-options'],
+    queryFn: async () => {
+      const { data } = await api.get('/devices', { params: { limit: 100 } });
+      return data.data ?? data;
+    },
+  });
+
   const saveMutation = useMutation({
     mutationFn: async (values: typeof emptyForm) => {
+      const payload = { ...values, device_id: values.device_id || undefined };
       if (editingId) {
-        return api.put(`/vehicles/${editingId}`, values);
+        return api.put(`/vehicles/${editingId}`, payload);
       }
-      return api.post('/vehicles', values);
+      return api.post('/vehicles', payload);
     },
     onSuccess: () => {
       toast.success(editingId ? 'Vehicle updated' : 'Vehicle added');
@@ -83,6 +101,9 @@ export default function VehiclesPage() {
   };
 
   const openEdit = (v: Vehicle) => {
+    const linkedDeviceId = v.device_id
+      ? typeof v.device_id === 'string' ? v.device_id : v.device_id._id
+      : '';
     setEditingId(v._id);
     setForm({
       vehicle_name: v.vehicle_name,
@@ -91,8 +112,15 @@ export default function VehiclesPage() {
       brand: v.brand || '',
       model: v.model || '',
       year: v.year || new Date().getFullYear(),
+      device_id: linkedDeviceId,
     });
     setModalOpen(true);
+  };
+
+  const getDeviceLabel = (v: Vehicle) => {
+    if (!v.device_id) return null;
+    if (typeof v.device_id === 'string') return v.device_id;
+    return `${v.device_id.device_name} (${v.device_id.imei})`;
   };
 
   const columns: Column<Vehicle>[] = [
@@ -107,9 +135,21 @@ export default function VehiclesPage() {
       ),
     },
     { key: 'plate_number', label: 'Plate' },
-    { key: 'brand', label: 'Brand' },
-    { key: 'model', label: 'Model' },
-    { key: 'year', label: 'Year' },
+    {
+      key: 'device_id',
+      label: 'GPS Device',
+      render: (v) => {
+        const label = getDeviceLabel(v);
+        return label ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+            <Cpu className="h-3 w-3" />
+            {label}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400 italic">No device</span>
+        );
+      },
+    },
     {
       key: 'status',
       label: 'Status',
@@ -280,6 +320,29 @@ export default function VehiclesPage() {
                 className={inputClass}
               />
             </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span className="flex items-center gap-1.5">
+                <Link2 className="h-3.5 w-3.5" />
+                GPS Device
+              </span>
+            </label>
+            <select
+              value={form.device_id}
+              onChange={(e) => setForm({ ...form, device_id: e.target.value })}
+              className={inputClass}
+            >
+              <option value="">— No device linked —</option>
+              {deviceOptions?.map((d) => (
+                <option key={d._id} value={d._id}>
+                  {d.device_name} ({d.imei})
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              Link a GPS device to enable real-time tracking
+            </p>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button

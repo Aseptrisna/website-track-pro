@@ -20,7 +20,7 @@ const benefits = [
   'Unlimited GPS vehicle tracking',
   'Real-time alerts & notifications',
   'Route history & analytics',
-  'Manage drivers & devices',
+  'Manage vehicles & devices',
   'Geofence monitoring',
 ];
 

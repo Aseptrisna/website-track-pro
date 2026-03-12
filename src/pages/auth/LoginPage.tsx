@@ -11,6 +11,7 @@ import {
   Shield,
   BarChart3,
   ArrowRight,
+  Play,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -26,6 +27,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +39,18 @@ export default function LoginPage() {
       toast.error('Invalid email or password');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setDemoLoading(true);
+    try {
+      await login('demo@trackpro.id', 'demo123456');
+      toast.success('Welcome to TrackPro Demo!');
+    } catch {
+      toast.error('Demo account unavailable');
+    } finally {
+      setDemoLoading(false);
     }
   };
 
@@ -180,15 +194,37 @@ export default function LoginPage() {
               <div className="h-px flex-1 bg-gray-200 dark:bg-slate-700" />
             </div>
 
-            <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-              Don&apos;t have an account?{' '}
-              <Link
-                to="/register"
-                className="font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
-              >
-                Create account
-              </Link>
+            {/* Demo Account */}
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              disabled={demoLoading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50 py-3 text-sm font-semibold text-emerald-700 transition-all hover:border-emerald-400 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:border-emerald-600 dark:hover:bg-emerald-900/40"
+            >
+              {demoLoading ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-400/30 border-t-emerald-600" />
+              ) : (
+                <>
+                  <Play className="h-4 w-4" />
+                  Try Demo Account
+                </>
+              )}
+            </button>
+            <p className="mt-2 text-center text-xs text-gray-400 dark:text-gray-500">
+              No registration needed — explore all features instantly
             </p>
+
+            <div className="mt-4">
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+                Don&apos;t have an account?{' '}
+                <Link
+                  to="/register"
+                  className="font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                >
+                  Create account
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>

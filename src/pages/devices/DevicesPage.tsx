@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Search, Wifi, WifiOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Wifi, WifiOff, Link2, LinkIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DataTable, { type Column } from '../../components/ui/DataTable';
 import Modal from '../../components/ui/Modal';
@@ -14,11 +14,17 @@ interface Device {
   phone_number: string;
   status: string;
   last_seen: string;
-  vehicle_id?: { vehicle_name: string } | null;
+  vehicle_id?: { _id: string; vehicle_name: string; plate_number: string } | string | null;
   [key: string]: unknown;
 }
 
-const emptyForm = { imei: '', device_name: '', phone_number: '' };
+interface VehicleOption {
+  _id: string;
+  vehicle_name: string;
+  plate_number: string;
+}
+
+const emptyForm = { imei: '', device_name: '', phone_number: '', vehicle_id: '' };
 
 export default function DevicesPage() {
   const queryClient = useQueryClient();
@@ -37,10 +43,20 @@ export default function DevicesPage() {
     },
   });
 
+  // Fetch vehicles for linking dropdown
+  const { data: vehicleOptions } = useQuery<VehicleOption[]>({
+    queryKey: ['vehicles-options'],
+    queryFn: async () => {
+      const { data } = await api.get('/vehicles', { params: { limit: 100 } });
+      return data.data ?? data;
+    },
+  });
+
   const saveMutation = useMutation({
     mutationFn: async (values: typeof emptyForm) => {
-      if (editingId) return api.put(`/devices/${editingId}`, values);
-      return api.post('/devices', values);
+      const payload = { ...values, vehicle_id: values.vehicle_id || undefined };
+      if (editingId) return api.put(`/devices/${editingId}`, payload);
+      return api.post('/devices', payload);
     },
     onSuccess: () => {
       toast.success(editingId ? 'Device updated' : 'Device added');
@@ -67,15 +83,43 @@ export default function DevicesPage() {
   };
 
   const openEdit = (d: Device) => {
+    const linkedVehicleId = d.vehicle_id
+      ? typeof d.vehicle_id === 'string' ? d.vehicle_id : d.vehicle_id._id
+      : '';
     setEditingId(d._id);
-    setForm({ imei: d.imei, device_name: d.device_name, phone_number: d.phone_number || '' });
+    setForm({
+      imei: d.imei,
+      device_name: d.device_name,
+      phone_number: d.phone_number || '',
+      vehicle_id: linkedVehicleId,
+    });
     setModalOpen(true);
+  };
+
+  const getVehicleLabel = (d: Device) => {
+    if (!d.vehicle_id) return null;
+    if (typeof d.vehicle_id === 'string') return d.vehicle_id;
+    return `${d.vehicle_id.vehicle_name} (${d.vehicle_id.plate_number})`;
   };
 
   const columns: Column<Device>[] = [
     { key: 'device_name', label: 'Name' },
     { key: 'imei', label: 'IMEI' },
-    { key: 'phone_number', label: 'Phone' },
+    {
+      key: 'vehicle_id',
+      label: 'Vehicle',
+      render: (d) => {
+        const label = getVehicleLabel(d);
+        return label ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+            <LinkIcon className="h-3 w-3" />
+            {label}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400 italic">Not linked</span>
+        );
+      },
+    },
     {
       key: 'status',
       label: 'Status',
@@ -206,6 +250,29 @@ export default function DevicesPage() {
               onChange={(e) => setForm({ ...form, phone_number: e.target.value })}
               className={inputClass}
             />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span className="flex items-center gap-1.5">
+                <Link2 className="h-3.5 w-3.5" />
+                Link to Vehicle
+              </span>
+            </label>
+            <select
+              value={form.vehicle_id}
+              onChange={(e) => setForm({ ...form, vehicle_id: e.target.value })}
+              className={inputClass}
+            >
+              <option value="">— No vehicle linked —</option>
+              {vehicleOptions?.map((v) => (
+                <option key={v._id} value={v._id}>
+                  {v.vehicle_name} ({v.plate_number})
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              Link this device to a vehicle to track its position
+            </p>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button
