@@ -1,30 +1,19 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Car,
-  Cpu,
-  Wifi,
-  WifiOff,
-  MapPin,
-  Activity,
-  Navigation,
+  Car, Cpu, Wifi, WifiOff, MapPin, Activity, Navigation,
+  AlertTriangle, CheckCircle, Info, Bell, Check, ChevronRight,
 } from 'lucide-react';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line,
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
+import clsx from 'clsx';
 import StatsCard from '../../components/ui/StatsCard';
 import api from '../../lib/axios';
+import { loadNotifPrefs } from '../../lib/notifPrefs';
 
 interface DashboardStats {
   totalVehicles: number;
@@ -67,10 +56,28 @@ interface DeviceItem {
   vehicle_id?: { vehicle_name: string; plate_number: string } | null;
 }
 
+interface AlertNotification {
+  _id: string;
+  title: string;
+  message: string;
+  type: string;
+  read_status: boolean;
+  createdAt: string;
+}
+
 const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+const alertTypeConfig: Record<string, { icon: typeof Bell; color: string; bg: string }> = {
+  alert:   { icon: AlertTriangle, color: 'text-red-500',    bg: 'bg-red-100 dark:bg-red-900/30' },
+  warning: { icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-100 dark:bg-yellow-900/30' },
+  info:    { icon: Info,          color: 'text-blue-500',   bg: 'bg-blue-100 dark:bg-blue-900/30' },
+  success: { icon: CheckCircle,   color: 'text-emerald-500',bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
+};
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const notifPrefs = loadNotifPrefs();
 
   const { data: stats, isLoading: loadingStats } = useQuery<DashboardStats>({
     queryKey: ['dashboard-stats'],
@@ -112,6 +119,28 @@ export default function DashboardPage() {
       return data.data ?? data;
     },
   });
+
+  const { data: alertNotifications } = useQuery<AlertNotification[]>({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const { data } = await api.get('/notifications');
+      return data.data ?? data;
+    },
+    refetchInterval: 30000,
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) => api.put(`/notifications/${id}/read`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+    },
+  });
+
+  // Unread alerts & warnings only, max 5 — shown in widget
+  const unreadAlerts = (alertNotifications ?? [])
+    .filter((n) => !n.read_status && (n.type === 'alert' || n.type === 'warning'))
+    .slice(0, 5);
 
   const onlineDevices = devices?.filter((d) => d.status === 'online') ?? [];
   const offlineDevices = devices?.filter((d) => d.status !== 'online') ?? [];
@@ -157,6 +186,78 @@ export default function DashboardPage() {
           color="purple"
         />
       </div>
+
+      {/* Recent Alerts Widget — only visible when pref enabled & there are unread alert/warning */}
+      {notifPrefs.dashboard_widget && unreadAlerts.length > 0 && (
+        <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 dark:border-red-900/40 dark:bg-red-900/10">
+          {/* Header */}
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <h3 className="font-semibold text-gray-900 dark:text-white">Recent Alerts</h3>
+              <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                {unreadAlerts.length}
+              </span>
+            </div>
+            <button
+              onClick={() => navigate('/app/notifications')}
+              className="flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+            >
+              View all <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {/* Alert list */}
+          <div className="space-y-2">
+            {unreadAlerts.map((n) => {
+              const cfg = alertTypeConfig[n.type] ?? alertTypeConfig.warning;
+              const Icon = cfg.icon;
+              return (
+                <div
+                  key={n._id}
+                  className="flex items-start gap-3 rounded-lg border border-white/60 bg-white px-3 py-2.5 shadow-sm dark:border-slate-700/50 dark:bg-slate-800"
+                >
+                  <div className={clsx('mt-0.5 rounded-md p-1.5 shrink-0', cfg.bg)}>
+                    <Icon className={clsx('h-4 w-4', cfg.color)} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{n.title}</p>
+                    <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">{n.message}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="text-xs text-gray-400">
+                      {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: idLocale })}
+                    </span>
+                    <button
+                      onClick={() => markReadMutation.mutate(n._id)}
+                      title="Mark as read"
+                      className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-emerald-500 dark:hover:bg-slate-700"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Offline device quick warning */}
+          {offlineDevices.length > 0 && (
+            <div className="mt-3 flex items-center justify-between rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 dark:border-yellow-900/40 dark:bg-yellow-900/10">
+              <div className="flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-400">
+                <WifiOff className="h-4 w-4" />
+                <span><strong>{offlineDevices.length}</strong> device{offlineDevices.length > 1 ? 's' : ''} currently offline</span>
+              </div>
+              <button
+                onClick={() => navigate('/app/devices')}
+                className="text-xs font-medium text-yellow-700 hover:underline dark:text-yellow-400"
+              >
+                Check →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

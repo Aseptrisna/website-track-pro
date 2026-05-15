@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Search, Link2, LinkIcon, Cpu } from 'lucide-react';
+import {
+  Plus, Pencil, Trash2, Search, Link2, Cpu,
+  Wrench, AlertTriangle, CheckCircle, Clock,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
+import clsx from 'clsx';
 import DataTable, { type Column } from '../../components/ui/DataTable';
 import Modal from '../../components/ui/Modal';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
@@ -17,6 +21,12 @@ interface Vehicle {
   year: number;
   status: string;
   device_id?: { _id: string; device_name: string; imei: string } | string | null;
+  odometer?: number;
+  last_service_date?: string;
+  last_service_km?: number;
+  next_service_date?: string;
+  next_service_km?: number;
+  service_notes?: string;
   [key: string]: unknown;
 }
 
@@ -26,18 +36,92 @@ interface DeviceOption {
   imei: string;
 }
 
-const vehicleTypes = ['truck', 'van', 'car', 'motorcycle', 'bus', 'pickup'];
+const vehicleTypes = [
+  'car', 'personal_car', 'truck', 'van', 'motorcycle',
+  'bus', 'pickup', 'delivery_vehicle', 'garbage_truck',
+  'rental_vehicle', 'government_vehicle', 'other',
+];
 
 const emptyForm = {
   vehicle_name: '',
-  vehicle_type: 'truck',
+  vehicle_type: 'car',
   plate_number: '',
   brand: '',
   model: '',
   year: new Date().getFullYear(),
   device_id: '',
+  odometer: '' as string | number,
+  last_service_date: '',
+  last_service_km: '' as string | number,
+  next_service_date: '',
+  next_service_km: '' as string | number,
+  service_notes: '',
 };
 
+// ── Service status helper ─────────────────────────────────────────────────────
+type ServiceStatus = 'overdue' | 'due_soon' | 'ok' | 'none';
+
+function getServiceStatus(v: Vehicle): ServiceStatus {
+  const now = Date.now();
+  const hasDateSchedule = !!v.next_service_date;
+  const hasKmSchedule = !!v.next_service_km && !!v.odometer;
+
+  if (!hasDateSchedule && !hasKmSchedule) return 'none';
+
+  let overdue = false;
+  let dueSoon = false;
+
+  if (hasDateSchedule) {
+    const nextDate = new Date(v.next_service_date!).getTime();
+    if (nextDate < now) overdue = true;
+    else if (nextDate - now <= 30 * 24 * 60 * 60 * 1000) dueSoon = true;
+  }
+
+  if (hasKmSchedule) {
+    const remaining = v.next_service_km! - v.odometer!;
+    if (remaining <= 0) overdue = true;
+    else if (remaining <= 1000) dueSoon = true;
+  }
+
+  if (overdue) return 'overdue';
+  if (dueSoon) return 'due_soon';
+  return 'ok';
+}
+
+function ServiceBadge({ v }: { v: Vehicle }) {
+  const status = getServiceStatus(v);
+
+  if (status === 'none') return <span className="text-xs text-gray-400 italic">Not set</span>;
+
+  const config = {
+    overdue: {
+      icon: AlertTriangle,
+      label: 'Overdue',
+      cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    },
+    due_soon: {
+      icon: Clock,
+      label: 'Due Soon',
+      cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    },
+    ok: {
+      icon: CheckCircle,
+      label: 'OK',
+      cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+    },
+  } as const;
+
+  const { icon: Icon, label, cls } = config[status];
+
+  return (
+    <span className={clsx('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium', cls)}>
+      <Icon className="h-3 w-3" />
+      {label}
+    </span>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function VehiclesPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -57,7 +141,6 @@ export default function VehiclesPage() {
     },
   });
 
-  // Fetch devices for linking dropdown
   const { data: deviceOptions } = useQuery<DeviceOption[]>({
     queryKey: ['devices-options'],
     queryFn: async () => {
@@ -68,10 +151,22 @@ export default function VehiclesPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (values: typeof emptyForm) => {
-      const payload = { ...values, device_id: values.device_id || undefined };
-      if (editingId) {
-        return api.put(`/vehicles/${editingId}`, payload);
-      }
+      const payload: Record<string, unknown> = {
+        vehicle_name: values.vehicle_name,
+        vehicle_type: values.vehicle_type,
+        plate_number: values.plate_number,
+        brand: values.brand || undefined,
+        model: values.model || undefined,
+        year: values.year || undefined,
+        device_id: values.device_id || undefined,
+        odometer: values.odometer !== '' ? Number(values.odometer) : undefined,
+        last_service_date: values.last_service_date || undefined,
+        last_service_km: values.last_service_km !== '' ? Number(values.last_service_km) : undefined,
+        next_service_date: values.next_service_date || undefined,
+        next_service_km: values.next_service_km !== '' ? Number(values.next_service_km) : undefined,
+        service_notes: values.service_notes || undefined,
+      };
+      if (editingId) return api.put(`/vehicles/${editingId}`, payload);
       return api.post('/vehicles', payload);
     },
     onSuccess: () => {
@@ -113,6 +208,12 @@ export default function VehiclesPage() {
       model: v.model || '',
       year: v.year || new Date().getFullYear(),
       device_id: linkedDeviceId,
+      odometer: v.odometer ?? '',
+      last_service_date: v.last_service_date ? v.last_service_date.slice(0, 10) : '',
+      last_service_km: v.last_service_km ?? '',
+      next_service_date: v.next_service_date ? v.next_service_date.slice(0, 10) : '',
+      next_service_km: v.next_service_km ?? '',
+      service_notes: v.service_notes || '',
     });
     setModalOpen(true);
   };
@@ -130,11 +231,24 @@ export default function VehiclesPage() {
       label: 'Type',
       render: (v) => (
         <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium capitalize text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
-          {v.vehicle_type}
+          {v.vehicle_type.replace(/_/g, ' ')}
         </span>
       ),
     },
     { key: 'plate_number', label: 'Plate' },
+    {
+      key: 'odometer',
+      label: 'Odometer',
+      render: (v) =>
+        v.odometer != null
+          ? <span className="text-sm text-gray-700 dark:text-gray-300">{v.odometer.toLocaleString()} km</span>
+          : <span className="text-xs text-gray-400 italic">—</span>,
+    },
+    {
+      key: 'next_service_date',
+      label: 'Service',
+      render: (v) => <ServiceBadge v={v} />,
+    },
     {
       key: 'device_id',
       label: 'GPS Device',
@@ -243,7 +357,9 @@ export default function VehiclesPage() {
         onClose={closeModal}
         title={editingId ? 'Edit Vehicle' : 'Add Vehicle'}
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
+
+          {/* ── Basic Info ── */}
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Vehicle Name
@@ -256,6 +372,7 @@ export default function VehiclesPage() {
               className={inputClass}
             />
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -268,7 +385,7 @@ export default function VehiclesPage() {
               >
                 {vehicleTypes.map((t) => (
                   <option key={t} value={t}>
-                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                    {t.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                   </option>
                 ))}
               </select>
@@ -286,11 +403,10 @@ export default function VehiclesPage() {
               />
             </div>
           </div>
+
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Brand
-              </label>
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Brand</label>
               <input
                 type="text"
                 value={form.brand}
@@ -299,9 +415,7 @@ export default function VehiclesPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Model
-              </label>
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Model</label>
               <input
                 type="text"
                 value={form.model}
@@ -310,9 +424,7 @@ export default function VehiclesPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Year
-              </label>
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Year</label>
               <input
                 type="number"
                 value={form.year}
@@ -321,6 +433,7 @@ export default function VehiclesPage() {
               />
             </div>
           </div>
+
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               <span className="flex items-center gap-1.5">
@@ -344,7 +457,103 @@ export default function VehiclesPage() {
               Link a GPS device to enable real-time tracking
             </p>
           </div>
-          <div className="flex justify-end gap-3 pt-2">
+
+          {/* ── Service Schedule ── */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-slate-600 dark:bg-slate-700/30">
+            <div className="mb-3 flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-amber-500" />
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">Service Schedule</span>
+            </div>
+
+            <div className="space-y-3">
+              {/* Odometer */}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                  Current Odometer (km)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="e.g. 45000"
+                  value={form.odometer}
+                  onChange={(e) => setForm({ ...form, odometer: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+
+              {/* Last service */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                    Last Service Date
+                  </label>
+                  <input
+                    type="date"
+                    value={form.last_service_date}
+                    onChange={(e) => setForm({ ...form, last_service_date: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                    Odometer at Last Service (km)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="e.g. 40000"
+                    value={form.last_service_km}
+                    onChange={(e) => setForm({ ...form, last_service_km: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              {/* Next service */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                    Next Service Date
+                  </label>
+                  <input
+                    type="date"
+                    value={form.next_service_date}
+                    onChange={(e) => setForm({ ...form, next_service_date: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                    Next Service at (km)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="e.g. 50000"
+                    value={form.next_service_km}
+                    onChange={(e) => setForm({ ...form, next_service_km: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                  Service Notes
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Oil change, tire rotation..."
+                  value={form.service_notes}
+                  onChange={(e) => setForm({ ...form, service_notes: e.target.value })}
+                  className={`${inputClass} resize-none`}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-1">
             <button
               type="button"
               onClick={closeModal}

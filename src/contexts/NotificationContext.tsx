@@ -4,6 +4,7 @@ import { io, type Socket } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
 import { useAuth } from './AuthContext';
+import { loadNotifPrefs } from '../lib/notifPrefs';
 
 interface NotificationContextType {
   unreadCount: number;
@@ -46,25 +47,24 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['unread-count'] });
 
-      // Toast per event type
+      // Read preferences fresh on every alert (user may have changed them)
+      const prefs = loadNotifPrefs();
+
       switch (data.event) {
         case 'geofence_enter':
-          toast(`Entered geofence: ${data.geofence}`, {
-            icon: '📍',
-            duration: 5000,
-          });
+          if (prefs.toast_geofence)
+            toast(`Entered geofence: ${data.geofence}`, { icon: '📍', duration: 5000 });
           break;
         case 'geofence_exit':
-          toast(`Exited geofence: ${data.geofence}`, {
-            icon: '🚧',
-            duration: 5000,
-          });
+          if (prefs.toast_geofence)
+            toast(`Exited geofence: ${data.geofence}`, { icon: '🚧', duration: 5000 });
           break;
         case 'speed_violation':
-          toast.error(
-            `Speed violation: ${data.speed} km/h (limit ${data.speedLimit} km/h)`,
-            { duration: 6000 },
-          );
+          if (prefs.toast_speed)
+            toast.error(
+              `Speed violation: ${data.speed} km/h (limit ${data.speedLimit} km/h)`,
+              { duration: 6000 },
+            );
           break;
       }
     });

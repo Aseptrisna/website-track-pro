@@ -18,6 +18,8 @@ const VehiclesPage = lazy(() => import('./pages/vehicles/VehiclesPage'));
 const DevicesPage = lazy(() => import('./pages/devices/DevicesPage'));
 const HistoryPage = lazy(() => import('./pages/history/HistoryPage'));
 const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage'));
+const GeofencesPage = lazy(() => import('./pages/geofences/GeofencesPage'));
+const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -62,6 +64,8 @@ export default function App() {
           <Route path="devices" element={<DevicesPage />} />
           <Route path="history" element={<HistoryPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="geofences" element={<GeofencesPage />} />
+          <Route path="reports" element={<ReportsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
 

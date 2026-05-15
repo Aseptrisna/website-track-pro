@@ -11,6 +11,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   X,
+  ShieldCheck,
+  BarChart2,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -28,6 +30,8 @@ const menuItems = [
   { to: '/app/vehicles', icon: Car, label: 'My Vehicles' },
   { to: '/app/devices', icon: Cpu, label: 'GPS Devices' },
   { to: '/app/history', icon: Route, label: 'Route History' },
+  { to: '/app/geofences', icon: ShieldCheck, label: 'Geofences' },
+  { to: '/app/reports', icon: BarChart2, label: 'Reports' },
   { to: '/app/notifications', icon: Bell, label: 'Notifications' },
   { to: '/app/settings', icon: Settings, label: 'Settings' },
 ];

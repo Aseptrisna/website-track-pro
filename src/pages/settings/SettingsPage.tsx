@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { User, Lock, Save } from 'lucide-react';
+import { User, Lock, Save, Bell, AlertTriangle, Gauge, LayoutDashboard } from 'lucide-react';
 import toast from 'react-hot-toast';
+import clsx from 'clsx';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import api from '../../lib/axios';
+import { loadNotifPrefs, saveNotifPrefs, type NotifPrefs } from '../../lib/notifPrefs';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -14,6 +16,8 @@ export default function SettingsPage() {
     name: user?.name || '',
     email: user?.email || '',
   });
+
+  const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(loadNotifPrefs);
 
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -72,6 +76,13 @@ export default function SettingsPage() {
       currentPassword: passwordForm.currentPassword,
       newPassword: passwordForm.newPassword,
     });
+  };
+
+  const handleNotifPrefToggle = (key: keyof NotifPrefs) => {
+    const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
+    setNotifPrefs(updated);
+    saveNotifPrefs(updated);
+    toast.success('Preference saved');
   };
 
   const inputClass =
@@ -227,6 +238,98 @@ export default function SettingsPage() {
               }`}
             />
           </button>
+        </div>
+      </div>
+
+      {/* Notification Preferences */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+        <div className="mb-5 flex items-center gap-2">
+          <Bell className="h-5 w-5 text-blue-500" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Notification Preferences</h2>
+        </div>
+
+        <div className="space-y-1">
+          {/* Section label */}
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            Pop-up Alerts (Toast)
+          </p>
+
+          {[
+            {
+              key: 'toast_geofence' as keyof NotifPrefs,
+              icon: AlertTriangle,
+              iconColor: 'text-red-500',
+              label: 'Geofence violations',
+              desc: 'Show pop-up when a vehicle enters or exits a geofence zone',
+            },
+            {
+              key: 'toast_speed' as keyof NotifPrefs,
+              icon: Gauge,
+              iconColor: 'text-yellow-500',
+              label: 'Speed limit exceeded',
+              desc: 'Show pop-up when a vehicle exceeds the set speed limit',
+            },
+          ].map(({ key, icon: Icon, iconColor, label, desc }) => (
+            <div
+              key={key}
+              className="flex items-center justify-between gap-4 rounded-lg px-3 py-3 hover:bg-gray-50 dark:hover:bg-slate-700/40"
+            >
+              <div className="flex items-start gap-3">
+                <Icon className={clsx('mt-0.5 h-4 w-4 shrink-0', iconColor)} />
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{desc}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleNotifPrefToggle(key)}
+                className={clsx(
+                  'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors',
+                  notifPrefs[key] ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-slate-600',
+                )}
+              >
+                <span
+                  className={clsx(
+                    'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                    notifPrefs[key] ? 'translate-x-6' : 'translate-x-1',
+                  )}
+                />
+              </button>
+            </div>
+          ))}
+
+          <div className="my-4 border-t border-gray-100 dark:border-slate-700" />
+
+          {/* Section label */}
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            Dashboard
+          </p>
+
+          <div className="flex items-center justify-between gap-4 rounded-lg px-3 py-3 hover:bg-gray-50 dark:hover:bg-slate-700/40">
+            <div className="flex items-start gap-3">
+              <LayoutDashboard className="mt-0.5 h-4 w-4 shrink-0 text-purple-500" />
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">Alert widget</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Show recent alert panel on the dashboard
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => handleNotifPrefToggle('dashboard_widget')}
+              className={clsx(
+                'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors',
+                notifPrefs.dashboard_widget ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-slate-600',
+              )}
+            >
+              <span
+                className={clsx(
+                  'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                  notifPrefs.dashboard_widget ? 'translate-x-6' : 'translate-x-1',
+                )}
+              />
+            </button>
+          </div>
         </div>
       </div>
     </div>
