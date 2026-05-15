@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Polygon, useMap, CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
 import { io, type Socket } from 'socket.io-client';
 import {
   Car, Wifi, WifiOff, Navigation, List, X, MapPin, Clock, Gauge,
   Satellite, Battery, Signal, ChevronRight, Radio, Eye, EyeOff,
+  ShieldCheck, Layers,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { formatDistanceToNow } from 'date-fns';
@@ -24,6 +25,19 @@ interface VehicleLocation {
   timestamp: string;
   imei: string;
 }
+
+interface Geofence {
+  _id: string;
+  name: string;
+  type: 'restricted' | 'operational' | 'delivery_zone';
+  polygon_coordinates: [number, number][];
+}
+
+const GEOFENCE_COLORS = {
+  restricted:    { color: '#ef4444', fillColor: '#ef4444' },
+  operational:   { color: '#10b981', fillColor: '#10b981' },
+  delivery_zone: { color: '#3b82f6', fillColor: '#3b82f6' },
+} as const;
 
 interface DeviceStatus {
   imei: string;
@@ -154,6 +168,8 @@ export default function TrackingPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
   const [flyTrigger, setFlyTrigger] = useState(0);
+  const [showGeofences, setShowGeofences] = useState(false);
+  const [trailPoints, setTrailPoints] = useState<[number, number][]>([]);
   const socketRef = useRef<Socket | null>(null);
 
   // Fetch initial data
@@ -166,12 +182,21 @@ export default function TrackingPage() {
     refetchInterval: 30000,
   });
 
-  const { data: vehicles } = useQuery<Array<{ _id: string; vehicle_name: string; plate_number: string; vehicle_type: string }>>({
+  const { data: vehicles } = useQuery<Array<{ _id: string; vehicle_name: string; plate_number: string; vehicle_type: string; speed_limit?: number }>>({
     queryKey: ['vehicles-list'],
     queryFn: async () => {
       const { data } = await api.get('/vehicles');
       return data.data ?? data;
     },
+  });
+
+  const { data: geofences = [] } = useQuery<Geofence[]>({
+    queryKey: ['geofences'],
+    queryFn: async () => {
+      const { data } = await api.get('/geofences');
+      return data;
+    },
+    enabled: showGeofences,
   });
 
   // Seed initial locations
@@ -226,6 +251,21 @@ export default function TrackingPage() {
       socket.disconnect();
     };
   }, [vehicles]);
+
+  // Fetch vehicle trail when selection changes
+  useEffect(() => {
+    if (!selectedVehicle) { setTrailPoints([]); return; }
+    const end = new Date();
+    const start = new Date(Date.now() - 60 * 60 * 1000); // last 1 hour
+    api
+      .get(`/gps-data/vehicle-history/${selectedVehicle}`, {
+        params: { startDate: start.toISOString(), endDate: end.toISOString() },
+      })
+      .then(({ data }) => {
+        setTrailPoints((data as any[]).map((p) => [p.latitude, p.longitude] as [number, number]));
+      })
+      .catch(() => setTrailPoints([]));
+  }, [selectedVehicle]);
 
   // Computed
   const vehicleList = useMemo(() => Object.values(locations), [locations]);
@@ -420,6 +460,31 @@ export default function TrackingPage() {
           <FitBounds locations={vehicleList} />
           <MapController position={flyPosition} shouldFly={flyTrigger > 0} key={flyTrigger} />
 
+          {/* Geofence overlays */}
+          {showGeofences && geofences.map((g) => {
+            const cfg = GEOFENCE_COLORS[g.type] ?? GEOFENCE_COLORS.operational;
+            return (
+              <Polygon
+                key={g._id}
+                positions={g.polygon_coordinates}
+                pathOptions={{ ...cfg, fillOpacity: 0.12, weight: 2, dashArray: g.type === 'restricted' ? '6 4' : undefined }}
+              >
+                <Popup>
+                  <div className="text-sm font-semibold">{g.name}</div>
+                  <div className="text-xs capitalize text-gray-500">{g.type.replace('_', ' ')}</div>
+                </Popup>
+              </Polygon>
+            );
+          })}
+
+          {/* Vehicle trail (last 1h) */}
+          {trailPoints.length >= 2 && (
+            <Polyline
+              positions={trailPoints}
+              pathOptions={{ color: '#10b981', weight: 3, opacity: 0.6, dashArray: '8 4' }}
+            />
+          )}
+
           {vehicleList.map((loc) => {
             const id = loc.vehicle_id || loc.imei;
             const isSelected = selectedVehicle === id;
@@ -543,13 +608,20 @@ export default function TrackingPage() {
               </div>
 
               {/* Stats grid */}
+              {(() => {
+                const speedLimit = selectedVehicleInfo?.speed_limit ?? 80;
+                const isOverSpeed = (selectedLocation.speed ?? 0) > speedLimit;
+                return (
               <div className="grid grid-cols-3 gap-0 border-b border-gray-100 dark:border-slate-700">
                 <div className="flex flex-col items-center py-3 border-r border-gray-100 dark:border-slate-700">
-                  <Gauge className="h-4 w-4 text-blue-500 mb-1" />
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">
+                  <Gauge className={clsx('h-4 w-4 mb-1', isOverSpeed ? 'text-red-500' : 'text-blue-500')} />
+                  <span className={clsx('text-lg font-bold', isOverSpeed ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white')}>
                     {selectedLocation.speed?.toFixed(0)}
                   </span>
-                  <span className="text-[10px] text-gray-400">km/h</span>
+                  <span className="text-[10px] text-gray-400">
+                    km/h {isOverSpeed && <span className="text-red-500 font-bold">↑</span>}
+                  </span>
+                  <span className="text-[9px] text-gray-300 dark:text-gray-600">lmt {speedLimit}</span>
                 </div>
                 <div className="flex flex-col items-center py-3 border-r border-gray-100 dark:border-slate-700">
                   <Navigation
@@ -569,6 +641,8 @@ export default function TrackingPage() {
                   <span className="text-[10px] text-gray-400">GPS</span>
                 </div>
               </div>
+                );
+              })()}
 
               {/* Location details */}
               <div className="p-4 pt-3 space-y-2">
@@ -609,6 +683,12 @@ export default function TrackingPage() {
                   </div>
                 )}
 
+                {trailPoints.length > 1 && (
+                  <div className="flex items-center gap-2 text-[10px] text-emerald-600 dark:text-emerald-400 pt-1">
+                    <Layers className="h-3 w-3" />
+                    Trail: {trailPoints.length} points (last 1h)
+                  </div>
+                )}
                 {selectedLocation.imei && (
                   <div className="flex items-center gap-2 text-[10px] text-gray-400 pt-1">
                     <Radio className="h-3 w-3" />
@@ -619,6 +699,23 @@ export default function TrackingPage() {
             </div>
           </div>
         )}
+
+        {/* Map overlay: Geofence toggle (top-right of map) */}
+        <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-2">
+          <button
+            onClick={() => setShowGeofences((v) => !v)}
+            title={showGeofences ? 'Hide geofences' : 'Show geofences'}
+            className={clsx(
+              'flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium shadow-lg backdrop-blur-sm transition-colors',
+              showGeofences
+                ? 'border-emerald-300 bg-emerald-600 text-white dark:border-emerald-700'
+                : 'border-gray-200 bg-white/90 text-gray-600 hover:bg-white dark:border-slate-700 dark:bg-slate-800/90 dark:text-gray-300',
+            )}
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Geofences
+          </button>
+        </div>
 
         {/* Map overlay: Stats badge (top-left) */}
         <div className="absolute top-3 left-3 z-[1000] hidden md:flex items-center gap-2 rounded-xl border border-gray-200 bg-white/90 backdrop-blur-sm px-3 py-2 shadow-lg dark:border-slate-700 dark:bg-slate-800/90">

@@ -200,10 +200,11 @@ export default function GeofencesPage() {
   }, [draftPoints.length]);
 
   const handleSave = (name: string, type: string) => {
+    const geofenceType = type as Geofence['type'];
     if (editGeofence) {
-      updateMutation.mutate({ id: editGeofence._id, payload: { name, type } });
+      updateMutation.mutate({ id: editGeofence._id, payload: { name, type: geofenceType } });
     } else {
-      createMutation.mutate({ name, type, polygon_coordinates: draftPoints });
+      createMutation.mutate({ name, type: geofenceType, polygon_coordinates: draftPoints });
     }
   };
 

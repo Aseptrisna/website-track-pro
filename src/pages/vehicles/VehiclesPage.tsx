@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Pencil, Trash2, Search, Link2, Cpu,
-  Wrench, AlertTriangle, CheckCircle, Clock,
+  Wrench, AlertTriangle, CheckCircle, Clock, FileText,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
@@ -27,7 +27,36 @@ interface Vehicle {
   next_service_date?: string;
   next_service_km?: number;
   service_notes?: string;
+  stnk_expiry?: string;
+  kir_expiry?: string;
+  insurance_expiry?: string;
   [key: string]: unknown;
+}
+
+// ── Document expiry helper ────────────────────────────────────────────────────
+type DocStatus = 'expired' | 'expiring' | 'ok' | 'none';
+function getDocStatus(date?: string): DocStatus {
+  if (!date) return 'none';
+  const now = Date.now();
+  const exp = new Date(date).getTime();
+  if (exp < now) return 'expired';
+  if (exp - now <= 30 * 24 * 60 * 60 * 1000) return 'expiring';
+  return 'ok';
+}
+function DocBadge({ label, date }: { label: string; date?: string }) {
+  const st = getDocStatus(date);
+  if (st === 'none') return null;
+  const cfg = {
+    expired:  'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    expiring: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    ok:       'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  } as const;
+  return (
+    <span className={clsx('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium', cfg[st])}>
+      {st === 'expired' ? <AlertTriangle className="h-2.5 w-2.5" /> : st === 'expiring' ? <Clock className="h-2.5 w-2.5" /> : <CheckCircle className="h-2.5 w-2.5" />}
+      {label}
+    </span>
+  );
 }
 
 interface DeviceOption {
@@ -56,6 +85,9 @@ const emptyForm = {
   next_service_date: '',
   next_service_km: '' as string | number,
   service_notes: '',
+  stnk_expiry: '',
+  kir_expiry: '',
+  insurance_expiry: '',
 };
 
 // ── Service status helper ─────────────────────────────────────────────────────
@@ -164,7 +196,10 @@ export default function VehiclesPage() {
         last_service_km: values.last_service_km !== '' ? Number(values.last_service_km) : undefined,
         next_service_date: values.next_service_date || undefined,
         next_service_km: values.next_service_km !== '' ? Number(values.next_service_km) : undefined,
-        service_notes: values.service_notes || undefined,
+        service_notes:    values.service_notes    || undefined,
+        stnk_expiry:      values.stnk_expiry      || undefined,
+        kir_expiry:       values.kir_expiry        || undefined,
+        insurance_expiry: values.insurance_expiry  || undefined,
       };
       if (editingId) return api.put(`/vehicles/${editingId}`, payload);
       return api.post('/vehicles', payload);
@@ -214,6 +249,9 @@ export default function VehiclesPage() {
       next_service_date: v.next_service_date ? v.next_service_date.slice(0, 10) : '',
       next_service_km: v.next_service_km ?? '',
       service_notes: v.service_notes || '',
+      stnk_expiry:      v.stnk_expiry      ? v.stnk_expiry.slice(0, 10)      : '',
+      kir_expiry:       v.kir_expiry        ? v.kir_expiry.slice(0, 10)        : '',
+      insurance_expiry: v.insurance_expiry  ? v.insurance_expiry.slice(0, 10)  : '',
     });
     setModalOpen(true);
   };
@@ -248,6 +286,21 @@ export default function VehiclesPage() {
       key: 'next_service_date',
       label: 'Service',
       render: (v) => <ServiceBadge v={v} />,
+    },
+    {
+      key: 'stnk_expiry',
+      label: 'Documents',
+      render: (v) => {
+        const none = !v.stnk_expiry && !v.kir_expiry && !v.insurance_expiry;
+        if (none) return <span className="text-xs italic text-gray-400">—</span>;
+        return (
+          <div className="flex flex-wrap gap-1">
+            <DocBadge label="STNK" date={v.stnk_expiry} />
+            <DocBadge label="KIR"  date={v.kir_expiry} />
+            <DocBadge label="Asuransi" date={v.insurance_expiry} />
+          </div>
+        );
+      },
     },
     {
       key: 'device_id',
@@ -549,6 +602,28 @@ export default function VehiclesPage() {
                   onChange={(e) => setForm({ ...form, service_notes: e.target.value })}
                   className={`${inputClass} resize-none`}
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Legal Documents ── */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-slate-600 dark:bg-slate-700/30">
+            <div className="mb-3 flex items-center gap-2">
+              <FileText className="h-4 w-4 text-blue-500" />
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">Legal Documents</span>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">STNK Expiry</label>
+                <input type="date" value={form.stnk_expiry} onChange={(e) => setForm({ ...form, stnk_expiry: e.target.value })} className={inputClass} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">KIR Expiry</label>
+                <input type="date" value={form.kir_expiry} onChange={(e) => setForm({ ...form, kir_expiry: e.target.value })} className={inputClass} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Asuransi Expiry</label>
+                <input type="date" value={form.insurance_expiry} onChange={(e) => setForm({ ...form, insurance_expiry: e.target.value })} className={inputClass} />
               </div>
             </div>
           </div>

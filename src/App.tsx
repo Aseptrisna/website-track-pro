@@ -20,6 +20,14 @@ const HistoryPage = lazy(() => import('./pages/history/HistoryPage'));
 const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage'));
 const GeofencesPage = lazy(() => import('./pages/geofences/GeofencesPage'));
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
+const DriversPage = lazy(() => import('./pages/drivers/DriversPage'));
+const ShipmentsPage = lazy(() => import('./pages/shipments/ShipmentsPage'));
+const FuelPage         = lazy(() => import('./pages/fuel/FuelPage'));
+const MaintenancePage  = lazy(() => import('./pages/maintenance/MaintenancePage'));
+const ExpensesPage     = lazy(() => import('./pages/expenses/ExpensesPage'));
+const TripLogPage      = lazy(() => import('./pages/trips/TripLogPage'));
+const ActivityLogPage = lazy(() => import('./pages/activity-log/ActivityLogPage'));
+const SimulatorPage   = lazy(() => import('./pages/simulator/SimulatorPage'));
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -66,6 +74,14 @@ export default function App() {
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="geofences" element={<GeofencesPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="drivers" element={<DriversPage />} />
+          <Route path="shipments" element={<ShipmentsPage />} />
+          <Route path="fuel" element={<FuelPage />} />
+          <Route path="maintenance" element={<MaintenancePage />} />
+          <Route path="expenses" element={<ExpensesPage />} />
+          <Route path="trips" element={<TripLogPage />} />
+          <Route path="activity-log" element={<ActivityLogPage />} />
+          <Route path="simulator" element={<SimulatorPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
 

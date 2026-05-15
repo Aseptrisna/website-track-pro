@@ -13,6 +13,13 @@ import {
   X,
   ShieldCheck,
   BarChart2,
+  UserRound,
+  Package,
+  ClipboardList,
+  Fuel,
+  Wrench,
+  Receipt,
+  Radio,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -28,11 +35,19 @@ const menuItems = [
   { to: '/app', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/app/tracking', icon: MapPin, label: 'Live Tracking' },
   { to: '/app/vehicles', icon: Car, label: 'My Vehicles' },
+  { to: '/app/drivers', icon: UserRound, label: 'Drivers' },
+  { to: '/app/shipments', icon: Package, label: 'Shipments' },
   { to: '/app/devices', icon: Cpu, label: 'GPS Devices' },
   { to: '/app/history', icon: Route, label: 'Route History' },
+  { to: '/app/trips', icon: Navigation, label: 'Trip Log' },
+  { to: '/app/fuel', icon: Fuel, label: 'Fuel' },
+  { to: '/app/maintenance', icon: Wrench, label: 'Maintenance' },
+  { to: '/app/expenses', icon: Receipt, label: 'Expenses' },
   { to: '/app/geofences', icon: ShieldCheck, label: 'Geofences' },
   { to: '/app/reports', icon: BarChart2, label: 'Reports' },
   { to: '/app/notifications', icon: Bell, label: 'Notifications' },
+  { to: '/app/activity-log', icon: ClipboardList, label: 'Activity Log' },
+  { to: '/app/simulator', icon: Radio, label: 'GPS Simulator' },
   { to: '/app/settings', icon: Settings, label: 'Settings' },
 ];
 

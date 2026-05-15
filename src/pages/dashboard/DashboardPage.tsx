@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Car, Cpu, Wifi, WifiOff, MapPin, Activity, Navigation,
   AlertTriangle, CheckCircle, Info, Bell, Check, ChevronRight,
+  UserRound, Package, Wrench, FileText,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -17,11 +18,13 @@ import { loadNotifPrefs } from '../../lib/notifPrefs';
 
 interface DashboardStats {
   totalVehicles: number;
-  activeDevices: number;
   onlineDevices: number;
-  totalShipments: number;
-  completedDeliveries: number;
   totalDrivers: number;
+  pendingShipments: number;
+  activeShipments: number;
+  serviceOverdue: number;
+  docsExpiringSoon: number;
+  licensesExpiringSoon: number;
 }
 
 interface FleetUsage {
@@ -159,31 +162,29 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Stats Cards — Row 1: Fleet */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatsCard title="Total Vehicles"  value={loadingStats ? '...' : stats?.totalVehicles ?? 0}     icon={Car}       color="emerald" />
+        <StatsCard title="Active Drivers"  value={loadingStats ? '...' : stats?.totalDrivers ?? 0}      icon={UserRound} color="blue" />
+        <StatsCard title="In Transit"      value={loadingStats ? '...' : stats?.activeShipments ?? 0}   icon={Package}   color="purple" />
+        <StatsCard title="Pending Orders"  value={loadingStats ? '...' : stats?.pendingShipments ?? 0}  icon={Package}   color="amber" />
+      </div>
+
+      {/* Stats Cards — Row 2: Compliance */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatsCard title="Online Devices"      value={loadingStats ? '...' : onlineDevices.length}                   icon={Wifi}      color="emerald" />
+        <StatsCard title="Live Tracking"       value={latestLocations?.length ?? 0}                                  icon={Navigation} color="blue" />
         <StatsCard
-          title="Total Vehicles"
-          value={loadingStats ? '...' : stats?.totalVehicles ?? 0}
-          icon={Car}
-          color="emerald"
+          title="Service Overdue"
+          value={loadingStats ? '...' : stats?.serviceOverdue ?? 0}
+          icon={Wrench}
+          color={stats?.serviceOverdue ? 'red' : 'emerald'}
         />
         <StatsCard
-          title="GPS Devices"
-          value={loadingStats ? '...' : devices?.length ?? 0}
-          icon={Cpu}
-          color="blue"
-        />
-        <StatsCard
-          title="Online Now"
-          value={loadingStats ? '...' : onlineDevices.length}
-          icon={Wifi}
-          color="emerald"
-        />
-        <StatsCard
-          title="Live Tracking"
-          value={latestLocations?.length ?? 0}
-          icon={Navigation}
-          color="purple"
+          title="Docs Expiring"
+          value={loadingStats ? '...' : (stats?.docsExpiringSoon ?? 0) + (stats?.licensesExpiringSoon ?? 0)}
+          icon={FileText}
+          color={(stats?.docsExpiringSoon ?? 0) + (stats?.licensesExpiringSoon ?? 0) > 0 ? 'amber' : 'emerald'}
         />
       </div>
 
@@ -377,7 +378,7 @@ export default function DashboardPage() {
               <h3 className="font-semibold text-gray-900 dark:text-white">Latest GPS Positions</h3>
             </div>
             <button
-              onClick={() => navigate('/tracking')}
+              onClick={() => navigate('/app/tracking')}
               className="text-xs font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
             >
               Open Live Map →
