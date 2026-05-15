@@ -9,10 +9,10 @@ export default function DashboardLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-slate-900">
-      {/* Mobile overlay */}
+      {/* Mobile overlay — must be above Leaflet controls (z ~800) */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-[900] bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}

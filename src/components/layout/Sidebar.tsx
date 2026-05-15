@@ -66,7 +66,7 @@ export default function Sidebar({
   return (
     <aside
       className={clsx(
-        'fixed inset-y-0 left-0 z-30 flex flex-col border-r border-gray-200 bg-white transition-all duration-300 dark:border-slate-700 dark:bg-slate-800 lg:static',
+        'fixed inset-y-0 left-0 z-[1000] flex flex-col border-r border-gray-200 bg-white transition-all duration-300 dark:border-slate-700 dark:bg-slate-800 lg:static',
         open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         collapsed ? 'w-20' : 'w-64',
       )}
