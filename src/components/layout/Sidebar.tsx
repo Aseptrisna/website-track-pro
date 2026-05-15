@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 interface SidebarProps {
   open: boolean;
@@ -37,6 +38,8 @@ export default function Sidebar({
   onClose,
   onToggleCollapse,
 }: SidebarProps) {
+  const { unreadCount } = useNotifications();
+
   return (
     <aside
       className={clsx(
@@ -75,7 +78,7 @@ export default function Sidebar({
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-1">
           {menuItems.map((item) => (
-            <li key={item.to}>
+            <li key={item.to} className="relative">
               <NavLink
                 to={item.to}
                 end={item.end}
@@ -91,7 +94,21 @@ export default function Sidebar({
                 }
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
+                {!collapsed && (
+                  <>
+                    <span className="flex-1">{item.label}</span>
+                    {item.to === '/app/notifications' && unreadCount > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                  </>
+                )}
+                {collapsed && item.to === '/app/notifications' && unreadCount > 0 && (
+                  <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </NavLink>
             </li>
           ))}
