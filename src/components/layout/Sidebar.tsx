@@ -20,6 +20,7 @@ import {
   Wrench,
   Receipt,
   Radio,
+  ShieldAlert,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -44,6 +45,7 @@ const menuItems = [
   { to: '/app/maintenance', icon: Wrench, label: 'Maintenance' },
   { to: '/app/expenses', icon: Receipt, label: 'Expenses' },
   { to: '/app/geofences', icon: ShieldCheck, label: 'Geofences' },
+  { to: '/app/safety', icon: ShieldAlert, label: 'Safety' },
   { to: '/app/reports', icon: BarChart2, label: 'Reports' },
   { to: '/app/notifications', icon: Bell, label: 'Notifications' },
   { to: '/app/activity-log', icon: ClipboardList, label: 'Activity Log' },
