@@ -29,6 +29,7 @@ const TripLogPage      = lazy(() => import('./pages/trips/TripLogPage'));
 const ActivityLogPage = lazy(() => import('./pages/activity-log/ActivityLogPage'));
 const SimulatorPage   = lazy(() => import('./pages/simulator/SimulatorPage'));
 const SafetyPage      = lazy(() => import('./pages/safety/SafetyPage'));
+const CompliancePage  = lazy(() => import('./pages/compliance/CompliancePage'));
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="activity-log" element={<ActivityLogPage />} />
           <Route path="simulator" element={<SimulatorPage />} />
           <Route path="safety" element={<SafetyPage />} />
+          <Route path="compliance" element={<CompliancePage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
 

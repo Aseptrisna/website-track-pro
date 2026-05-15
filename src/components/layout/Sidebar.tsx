@@ -21,6 +21,7 @@ import {
   Receipt,
   Radio,
   ShieldAlert,
+  FileWarning,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -46,6 +47,7 @@ const menuItems = [
   { to: '/app/expenses', icon: Receipt, label: 'Expenses' },
   { to: '/app/geofences', icon: ShieldCheck, label: 'Geofences' },
   { to: '/app/safety', icon: ShieldAlert, label: 'Safety' },
+  { to: '/app/compliance', icon: FileWarning, label: 'Compliance' },
   { to: '/app/reports', icon: BarChart2, label: 'Reports' },
   { to: '/app/notifications', icon: Bell, label: 'Notifications' },
   { to: '/app/activity-log', icon: ClipboardList, label: 'Activity Log' },
