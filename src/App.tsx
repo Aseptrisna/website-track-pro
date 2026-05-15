@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import LoadingScreen from './components/ui/LoadingScreen';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -49,7 +50,9 @@ export default function App() {
           path="/app"
           element={
             <ProtectedRoute>
-              <DashboardLayout />
+              <NotificationProvider>
+                <DashboardLayout />
+              </NotificationProvider>
             </ProtectedRoute>
           }
         >

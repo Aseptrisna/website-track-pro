@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bell, BellOff, Check, CheckCheck, Mail, AlertTriangle, Info } from 'lucide-react';
+import { Bell, BellOff, Check, CheckCheck, Mail, AlertTriangle, Info, CheckCircle, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
 import api from '../../lib/axios';
@@ -10,18 +10,22 @@ interface Notification {
   message: string;
   type: string;
   read_status: boolean;
-  timestamp: string;
+  createdAt: string;
 }
 
 const typeIcons: Record<string, typeof Bell> = {
   alert: AlertTriangle,
+  warning: AlertTriangle,
   info: Info,
+  success: CheckCircle,
   email: Mail,
 };
 
 const typeColors: Record<string, string> = {
   alert: 'text-red-500 bg-red-100 dark:bg-red-900/30',
+  warning: 'text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30',
   info: 'text-blue-500 bg-blue-100 dark:bg-blue-900/30',
+  success: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-900/30',
   email: 'text-purple-500 bg-purple-100 dark:bg-purple-900/30',
 };
 
@@ -40,7 +44,7 @@ export default function NotificationsPage() {
     queryKey: ['unread-count'],
     queryFn: async () => {
       const { data } = await api.get('/notifications/unread-count');
-      return data.count ?? data;
+      return data.count;
     },
   });
 
@@ -56,6 +60,15 @@ export default function NotificationsPage() {
     mutationFn: () => api.put('/notifications/read-all'),
     onSuccess: () => {
       toast.success('All notifications marked as read');
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/notifications/${id}`),
+    onSuccess: () => {
+      toast.success('Notification deleted');
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['unread-count'] });
     },
@@ -124,16 +137,25 @@ export default function NotificationsPage() {
                   <p className="font-medium text-gray-900 dark:text-white">{n.title}</p>
                   <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">{n.message}</p>
                   <p className="mt-1 text-xs text-gray-400">
-                    {new Date(n.timestamp).toLocaleString('id-ID')}
+                    {new Date(n.createdAt).toLocaleString('id-ID')}
                   </p>
                 </div>
-                <button
-                  onClick={() => markReadMutation.mutate(n._id)}
-                  className="shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700"
-                  title="Mark as read"
-                >
-                  <Check className="h-4 w-4" />
-                </button>
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    onClick={() => markReadMutation.mutate(n._id)}
+                    className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700"
+                    title="Mark as read"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => deleteMutation.mutate(n._id)}
+                    className="rounded-lg p-1.5 text-gray-400 hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -161,9 +183,16 @@ export default function NotificationsPage() {
                   <p className="font-medium text-gray-900 dark:text-white">{n.title}</p>
                   <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">{n.message}</p>
                   <p className="mt-1 text-xs text-gray-400">
-                    {new Date(n.timestamp).toLocaleString('id-ID')}
+                    {new Date(n.createdAt).toLocaleString('id-ID')}
                   </p>
                 </div>
+                <button
+                  onClick={() => deleteMutation.mutate(n._id)}
+                  className="shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30"
+                  title="Delete"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
             );
           })}
