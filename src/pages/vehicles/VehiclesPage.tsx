@@ -409,6 +409,7 @@ export default function VehiclesPage() {
         isOpen={modalOpen}
         onClose={closeModal}
         title={editingId ? 'Edit Vehicle' : 'Add Vehicle'}
+        size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-5">
 
@@ -628,7 +629,7 @@ export default function VehiclesPage() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-1">
+          <div className="flex flex-shrink-0 justify-end gap-3 border-t border-gray-200 pt-3 dark:border-slate-700">
             <button
               type="button"
               onClick={closeModal}

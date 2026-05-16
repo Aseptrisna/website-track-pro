@@ -6,9 +6,11 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
+  const sizeClass = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' }[size];
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -31,9 +33,9 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
       />
 
       {/* Modal content */}
-      <div className="relative z-10 mx-2 w-full max-w-lg rounded-xl border border-gray-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800 sm:mx-0">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-slate-700 sm:px-6 sm:py-4">
+      <div className={`relative z-10 mx-2 flex max-h-[90vh] w-full flex-col rounded-xl border border-gray-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800 sm:mx-0 ${sizeClass}`}>
+        {/* Header — stays fixed */}
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-slate-700 sm:px-6 sm:py-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {title}
           </h2>
@@ -45,8 +47,8 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-4 py-3 sm:px-6 sm:py-4">{children}</div>
+        {/* Body — scrolls */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">{children}</div>
       </div>
     </div>
   );
