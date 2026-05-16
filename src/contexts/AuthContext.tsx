@@ -8,10 +8,11 @@ import {
 import api from '../lib/axios';
 
 interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
+  id:           string;
+  name:         string;
+  email:        string;
+  role:         string;
+  isTeamMember: boolean;
 }
 
 interface AuthContextType {

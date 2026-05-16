@@ -28,7 +28,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
   }, []);
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-slate-700 dark:bg-slate-800">
+    <header className="relative z-[1100] flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-slate-700 dark:bg-slate-800">
       {/* Left: mobile menu */}
       <button
         onClick={onMenuClick}

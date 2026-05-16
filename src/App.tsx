@@ -31,6 +31,17 @@ const SimulatorPage   = lazy(() => import('./pages/simulator/SimulatorPage'));
 const SafetyPage      = lazy(() => import('./pages/safety/SafetyPage'));
 const CompliancePage  = lazy(() => import('./pages/compliance/CompliancePage'));
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
+const AlertRulesPage    = lazy(() => import('./pages/alert-rules/AlertRulesPage'));
+const UtilizationPage   = lazy(() => import('./pages/utilization/UtilizationPage'));
+const AssignmentsPage   = lazy(() => import('./pages/assignments/AssignmentsPage'));
+const IdleTimePage           = lazy(() => import('./pages/idle-time/IdleTimePage'));
+const ScheduledReportsPage   = lazy(() => import('./pages/scheduled-reports/ScheduledReportsPage'));
+const TeamPage               = lazy(() => import('./pages/team/TeamPage'));
+const IncidentsPage          = lazy(() => import('./pages/incidents/IncidentsPage'));
+const FuelEfficiencyPage     = lazy(() => import('./pages/fuel-efficiency/FuelEfficiencyPage'));
+const CalendarPage           = lazy(() => import('./pages/calendar/CalendarPage'));
+const RoutePlansPage         = lazy(() => import('./pages/route-plans/RoutePlansPage'));
+const EmissionsPage          = lazy(() => import('./pages/emissions/EmissionsPage'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -86,6 +97,17 @@ export default function App() {
           <Route path="simulator" element={<SimulatorPage />} />
           <Route path="safety" element={<SafetyPage />} />
           <Route path="compliance" element={<CompliancePage />} />
+          <Route path="alert-rules"  element={<AlertRulesPage />} />
+          <Route path="utilization"  element={<UtilizationPage />} />
+          <Route path="assignments"  element={<AssignmentsPage />} />
+          <Route path="idle-time"        element={<IdleTimePage />} />
+          <Route path="scheduled-reports" element={<ScheduledReportsPage />} />
+          <Route path="team"             element={<TeamPage />} />
+          <Route path="incidents"        element={<IncidentsPage />} />
+          <Route path="fuel-efficiency"  element={<FuelEfficiencyPage />} />
+          <Route path="calendar"         element={<CalendarPage />} />
+          <Route path="route-plans"      element={<RoutePlansPage />} />
+          <Route path="emissions"        element={<EmissionsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
 

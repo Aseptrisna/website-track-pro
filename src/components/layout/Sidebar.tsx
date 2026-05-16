@@ -21,10 +21,22 @@ import {
   Receipt,
   Radio,
   ShieldAlert,
+  Siren,
+  Gauge,
+  CalendarDays,
+  MapPinned,
+  Leaf,
   FileWarning,
+  BellRing,
+  PieChart,
+  GitMerge,
+  Timer,
+  MailCheck,
+  Users,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarProps {
   open: boolean;
@@ -37,23 +49,37 @@ const menuItems = [
   { to: '/app', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/app/tracking', icon: MapPin, label: 'Live Tracking' },
   { to: '/app/vehicles', icon: Car, label: 'My Vehicles' },
-  { to: '/app/drivers', icon: UserRound, label: 'Drivers' },
+  { to: '/app/drivers',     icon: UserRound, label: 'Drivers' },
+  { to: '/app/assignments', icon: GitMerge,  label: 'Assignments' },
   { to: '/app/shipments', icon: Package, label: 'Shipments' },
   { to: '/app/devices', icon: Cpu, label: 'GPS Devices' },
   { to: '/app/history', icon: Route, label: 'Route History' },
-  { to: '/app/trips', icon: Navigation, label: 'Trip Log' },
+  { to: '/app/route-plans', icon: MapPinned, label: 'Route Plans' },
+  { to: '/app/trips',     icon: Navigation, label: 'Trip Log' },
+  { to: '/app/idle-time', icon: Timer,      label: 'Idle Time' },
   { to: '/app/fuel', icon: Fuel, label: 'Fuel' },
+  { to: '/app/fuel-efficiency', icon: Gauge, label: 'Fuel Efficiency' },
+  { to: '/app/emissions', icon: Leaf, label: 'CO₂ Emissions' },
   { to: '/app/maintenance', icon: Wrench, label: 'Maintenance' },
+  { to: '/app/calendar', icon: CalendarDays, label: 'Sched. Calendar' },
   { to: '/app/expenses', icon: Receipt, label: 'Expenses' },
   { to: '/app/geofences', icon: ShieldCheck, label: 'Geofences' },
   { to: '/app/safety', icon: ShieldAlert, label: 'Safety' },
+  { to: '/app/incidents', icon: Siren, label: 'Incidents' },
+  { to: '/app/alert-rules', icon: BellRing, label: 'Alert Rules' },
   { to: '/app/compliance', icon: FileWarning, label: 'Compliance' },
-  { to: '/app/reports', icon: BarChart2, label: 'Reports' },
+  { to: '/app/utilization', icon: PieChart, label: 'Utilization' },
+  { to: '/app/reports',            icon: BarChart2,  label: 'Reports'           },
+  { to: '/app/scheduled-reports', icon: MailCheck,  label: 'Sched. Reports'    },
   { to: '/app/notifications', icon: Bell, label: 'Notifications' },
   { to: '/app/activity-log', icon: ClipboardList, label: 'Activity Log' },
   { to: '/app/simulator', icon: Radio, label: 'GPS Simulator' },
+  { to: '/app/team',     icon: Users,    label: 'Team Members' },
   { to: '/app/settings', icon: Settings, label: 'Settings' },
 ];
+
+// Items visible only to fleet owners (not team members)
+const OWNER_ONLY_PATHS = ['/app/team', '/app/simulator', '/app/scheduled-reports'];
 
 export default function Sidebar({
   open,
@@ -62,6 +88,8 @@ export default function Sidebar({
   onToggleCollapse,
 }: SidebarProps) {
   const { unreadCount } = useNotifications();
+  const { user } = useAuth();
+  const isTeamMember = user?.isTeamMember ?? false;
 
   return (
     <aside
@@ -100,7 +128,9 @@ export default function Sidebar({
       {/* Nav links */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-1">
-          {menuItems.map((item) => (
+          {menuItems.filter((item) =>
+            !isTeamMember || !OWNER_ONLY_PATHS.includes(item.to),
+          ).map((item) => (
             <li key={item.to} className="relative">
               <NavLink
                 to={item.to}

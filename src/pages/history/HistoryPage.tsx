@@ -47,6 +47,14 @@ function createVehicleIcon(isMoving: boolean, course: number) {
   });
 }
 
+// ─── Speed colour helper ──────────────────────────────────────────────────────
+function getSpeedColor(speed: number): string {
+  if (speed < 20)  return '#22c55e'; // green  — slow
+  if (speed < 50)  return '#eab308'; // yellow — moderate
+  if (speed < 80)  return '#f97316'; // orange — fast
+  return '#ef4444';                  // red    — very fast
+}
+
 // ─── Map helpers ──────────────────────────────────────────────────────────────
 function MapResizer() {
   const map = useMap();
@@ -322,13 +330,31 @@ export default function HistoryPage() {
               <MapResizer />
               {routePoints.length > 1 && <FitRoute points={routePoints} />}
 
-              {/* Traveled portion — emerald */}
-              {playedRoute.length > 1 && (
-                <Polyline positions={playedRoute} color="#10b981" weight={5} opacity={0.9} />
-              )}
-              {/* Remaining portion — gray */}
-              {remainingRoute.length > 1 && (
-                <Polyline positions={remainingRoute} color="#9ca3af" weight={4} opacity={0.5} dashArray="6 6" />
+              {/* ── Speed-coloured full route (always visible) ── */}
+              {historyData && historyData.length > 1 && historyData.map((pt, i) => {
+                if (i === 0) return null;
+                const prev = historyData[i - 1];
+                const color = getSpeedColor(pt.speed ?? 0);
+                // dim segments that are "ahead" during playback
+                const isPast = i <= playbackIndex;
+                const opacity = (playbackIndex > 0 && !isPast) ? 0.25 : 0.9;
+                return (
+                  <Polyline
+                    key={i}
+                    positions={[
+                      [prev.latitude, prev.longitude],
+                      [pt.latitude,   pt.longitude],
+                    ]}
+                    color={color}
+                    weight={5}
+                    opacity={opacity}
+                  />
+                );
+              })}
+
+              {/* Playback progress stroke — bright white outline on top */}
+              {playedRoute.length > 1 && playbackIndex > 0 && (
+                <Polyline positions={playedRoute} color="#ffffff" weight={7} opacity={0.3} />
               )}
 
               {/* Start marker */}
@@ -375,6 +401,24 @@ export default function HistoryPage() {
             </MapContainer>
           )}
         </div>
+
+        {/* Speed legend */}
+        {hasData && (
+          <div className="flex items-center gap-3 border-t border-gray-200 bg-white px-4 py-2 dark:border-slate-700 dark:bg-slate-800">
+            <span className="text-xs text-gray-500 dark:text-gray-400">Speed:</span>
+            {[
+              { color: '#22c55e', label: '< 20 km/h' },
+              { color: '#eab308', label: '20–50' },
+              { color: '#f97316', label: '50–80' },
+              { color: '#ef4444', label: '> 80 km/h' },
+            ].map((s) => (
+              <span key={s.label} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
+                <span className="inline-block h-2 w-5 rounded-full" style={{ backgroundColor: s.color }} />
+                {s.label}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Playback controls */}
         {hasData && (

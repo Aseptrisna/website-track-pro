@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Pencil, Trash2, Search,
   AlertTriangle, CheckCircle, Clock, UserRound,
+  BarChart2, ShieldCheck, ShieldAlert, ShieldX, Car,
 } from 'lucide-react';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
@@ -73,9 +74,126 @@ function LicenseBadge({ date }: { date?: string }) {
   );
 }
 
+// ─── Performance types & helpers ─────────────────────────────────────────────
+interface DriverPerf {
+  driver_id: string | null;
+  driver_name: string;
+  driver_phone: string | null;
+  driver_status: string | null;
+  vehicle_id: string;
+  vehicle_name: string;
+  vehicle_plate: string;
+  violations: { severe: number; moderate: number; mild: number; total: number };
+  score: number;
+  grade: 'excellent' | 'good' | 'fair' | 'poor';
+  period_days: number;
+}
+
+const GRADE = {
+  excellent: { label: 'Excellent', icon: ShieldCheck, ring: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20', badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' },
+  good:      { label: 'Good',      icon: ShieldCheck, ring: 'text-blue-500',    bg: 'bg-blue-50 dark:bg-blue-900/20',       badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
+  fair:      { label: 'Fair',      icon: ShieldAlert, ring: 'text-amber-500',   bg: 'bg-amber-50 dark:bg-amber-900/20',     badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },
+  poor:      { label: 'Poor',      icon: ShieldX,     ring: 'text-red-500',     bg: 'bg-red-50 dark:bg-red-900/20',         badge: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
+} as const;
+
+function ScoreRing({ score, grade }: { score: number; grade: DriverPerf['grade'] }) {
+  const r = 28;
+  const circ = 2 * Math.PI * r;
+  const dash = (score / 100) * circ;
+  const { ring } = GRADE[grade];
+  return (
+    <div className="relative flex h-16 w-16 items-center justify-center">
+      <svg width="64" height="64" className="-rotate-90">
+        <circle cx="32" cy="32" r={r} fill="none" stroke="currentColor" strokeWidth="5" className="text-gray-200 dark:text-slate-600" />
+        <circle cx="32" cy="32" r={r} fill="none" strokeWidth="5"
+          stroke="currentColor" className={ring}
+          strokeDasharray={`${dash} ${circ}`}
+          strokeLinecap="round"
+        />
+      </svg>
+      <span className={clsx('absolute text-sm font-bold', ring)}>{score}</span>
+    </div>
+  );
+}
+
+function PerformancePanel({ days }: { days: number }) {
+  const { data, isLoading } = useQuery<DriverPerf[]>({
+    queryKey: ['driver-performance', days],
+    queryFn: async () => {
+      const { data } = await api.get('/drivers/performance', { params: { days } });
+      return data;
+    },
+  });
+
+  if (isLoading) return (
+    <div className="flex items-center justify-center py-16 text-gray-400">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent" />
+    </div>
+  );
+
+  if (!data?.length) return (
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 py-16 dark:border-slate-600 dark:bg-slate-800/50">
+      <BarChart2 className="h-8 w-8 text-gray-400" />
+      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No drivers with assigned vehicles found</p>
+    </div>
+  );
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {data.map((d, i) => {
+        const { label, bg, badge } = GRADE[d.grade];
+        return (
+          <div key={d.vehicle_id} className={clsx('relative rounded-xl border border-gray-200 p-4 dark:border-slate-700 dark:bg-slate-800', bg)}>
+            {/* Rank */}
+            <span className="absolute right-3 top-3 text-xs font-bold text-gray-400 dark:text-slate-500">#{i + 1}</span>
+
+            {/* Header */}
+            <div className="flex items-start gap-3">
+              <ScoreRing score={d.score} grade={d.grade} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-gray-900 dark:text-white">{d.driver_name}</p>
+                {d.driver_phone && <p className="text-xs text-gray-400">{d.driver_phone}</p>}
+                <span className={clsx('mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold', badge)}>
+                  {label}
+                </span>
+              </div>
+            </div>
+
+            {/* Vehicle */}
+            <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+              <Car className="h-3.5 w-3.5" />
+              <span className="truncate">{d.vehicle_name} · {d.vehicle_plate}</span>
+            </div>
+
+            {/* Violations */}
+            <div className="mt-3 grid grid-cols-3 divide-x divide-gray-200 rounded-lg border border-gray-200 dark:divide-slate-700 dark:border-slate-700">
+              {([
+                { key: 'mild',     label: 'Mild',     color: 'text-amber-600 dark:text-amber-400' },
+                { key: 'moderate', label: 'Moderate', color: 'text-orange-600 dark:text-orange-400' },
+                { key: 'severe',   label: 'Severe',   color: 'text-red-600 dark:text-red-400' },
+              ] as const).map(({ key, label: vLabel, color }) => (
+                <div key={key} className="flex flex-col items-center py-2">
+                  <span className={clsx('text-base font-bold', color)}>{d.violations[key]}</span>
+                  <span className="text-[10px] text-gray-400">{vLabel}</span>
+                </div>
+              ))}
+            </div>
+
+            <p className="mt-2 text-right text-[10px] text-gray-400 dark:text-slate-500">
+              Last {d.period_days} days · {d.violations.total} violation{d.violations.total !== 1 ? 's' : ''}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function DriversPage() {
   const queryClient = useQueryClient();
+  const [tab, setTab]         = useState<'list' | 'performance'>('list');
+  const [perfDays, setPerfDays] = useState(30);
   const [page, setPage]       = useState(1);
   const [search, setSearch]   = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -230,6 +348,49 @@ export default function DriversPage() {
         </button>
       </div>
 
+      {/* Tab switcher */}
+      <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-slate-700 dark:bg-slate-800/50 w-fit">
+        {(['list', 'performance'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={clsx(
+              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              tab === t
+                ? 'bg-white text-gray-900 shadow-sm dark:bg-slate-700 dark:text-white'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
+            )}
+          >
+            {t === 'list' ? <><UserRound className="h-3.5 w-3.5" /> Drivers</> : <><BarChart2 className="h-3.5 w-3.5" /> Performance</>}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'performance' && (
+        <div className="space-y-4">
+          {/* Period selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500 dark:text-gray-400">Period:</span>
+            {[7, 30, 90].map((d) => (
+              <button
+                key={d}
+                onClick={() => setPerfDays(d)}
+                className={clsx(
+                  'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+                  perfDays === d
+                    ? 'bg-emerald-600 text-white'
+                    : 'border border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700',
+                )}
+              >
+                {d}d
+              </button>
+            ))}
+          </div>
+          <PerformancePanel days={perfDays} />
+        </div>
+      )}
+
+      {tab === 'list' && <>
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         <input
@@ -328,6 +489,7 @@ export default function DriversPage() {
         message="Are you sure you want to delete this driver?"
         loading={deleteMutation.isPending}
       />
+      </>}
     </div>
   );
 }
