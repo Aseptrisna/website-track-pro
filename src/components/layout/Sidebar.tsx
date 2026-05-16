@@ -248,9 +248,15 @@ export default function Sidebar({
   return (
     <aside
       className={clsx(
-        'fixed inset-y-0 left-0 z-[1000] flex flex-col border-r border-gray-200 bg-white transition-all duration-300 dark:border-slate-700 dark:bg-slate-800 lg:static',
+        // Base
+        'fixed inset-y-0 left-0 z-[1000] flex flex-col border-r border-gray-200 bg-white',
+        'dark:border-slate-700 dark:bg-slate-800 lg:static',
+        // GPU-accelerated slide — critical for 60fps on Android/iOS
+        'will-change-transform transition-transform duration-300 ease-in-out',
+        // Width transition only on desktop (lg+)
+        'lg:transition-[transform,width] lg:duration-300',
         open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-        collapsed ? 'w-20' : 'w-64',
+        collapsed ? 'w-64 lg:w-20' : 'w-64',
       )}
     >
       {/* Logo */}
@@ -280,7 +286,17 @@ export default function Sidebar({
       </div>
 
       {/* Nav groups */}
-      <nav className="flex-1 overflow-y-auto px-3 py-3">
+      <nav
+        className="flex-1 overflow-y-auto px-3 py-3"
+        style={{
+          // Smooth momentum scrolling on iOS
+          WebkitOverflowScrolling: 'touch',
+          // Prevent scroll from leaking to body (rubber-band containment)
+          overscrollBehaviorY: 'contain',
+          // Safe area padding for iPhone home bar
+          paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+        }}
+      >
         {menuGroups.map((group) => {
           const visibleItems = group.items.filter(
             (item) => !isTeamMember || !item.ownerOnly,
@@ -292,7 +308,7 @@ export default function Sidebar({
 
           return (
             <div key={group.label} className="mb-2">
-              {/* Group header */}
+              {/* Group header — always visible on mobile; hidden when desktop-collapsed */}
               {!collapsed ? (
                 <button
                   onClick={() => toggleGroup(group.label)}
@@ -334,18 +350,20 @@ export default function Sidebar({
                         onClick={onClose}
                         className={({ isActive }) =>
                           clsx(
-                            'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
+                            'group relative flex items-center gap-3 rounded-lg px-3 text-sm font-medium transition-all duration-150',
+                            // Larger tap target on mobile, compact on desktop
+                            'py-3 lg:py-2',
                             isActive
                               ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                               : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-slate-700 dark:hover:text-gray-200',
-                            collapsed && 'justify-center',
+                            collapsed && 'lg:justify-center',
                           )
                         }
                       >
                         {({ isActive }) => (
                           <>
-                            {/* Left accent bar */}
-                            {isActive && !collapsed && (
+                            {/* Left accent bar — hide when desktop-collapsed */}
+                            {isActive && !(collapsed) && (
                               <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-emerald-600 dark:bg-emerald-400" />
                             )}
 
@@ -356,21 +374,29 @@ export default function Sidebar({
                               )}
                             />
 
-                            {!collapsed && (
-                              <>
-                                <span className="flex-1 truncate">{item.label}</span>
-                                {item.to === '/app/notifications' && unreadCount > 0 && (
-                                  <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                                    {unreadCount > 99 ? '99+' : unreadCount}
-                                  </span>
-                                )}
-                              </>
-                            )}
+                            {/* Label — hidden only when desktop sidebar is collapsed */}
+                            <span className={clsx('flex-1 truncate', collapsed && 'lg:hidden')}>
+                              {item.label}
+                            </span>
 
-                            {collapsed && item.to === '/app/notifications' && unreadCount > 0 && (
-                              <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-                                {unreadCount > 9 ? '9+' : unreadCount}
-                              </span>
+                            {/* Notification badge — inline when label visible */}
+                            {item.to === '/app/notifications' && unreadCount > 0 && (
+                              <>
+                                {/* Shown next to label */}
+                                <span className={clsx(
+                                  'flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white',
+                                  collapsed && 'lg:hidden',
+                                )}>
+                                  {unreadCount > 99 ? '99+' : unreadCount}
+                                </span>
+                                {/* Dot shown when desktop-collapsed */}
+                                <span className={clsx(
+                                  'absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white',
+                                  collapsed ? 'lg:flex hidden' : 'hidden',
+                                )}>
+                                  {unreadCount > 9 ? '9+' : unreadCount}
+                                </span>
+                              </>
                             )}
                           </>
                         )}
@@ -379,6 +405,7 @@ export default function Sidebar({
 
                     return (
                       <li key={item.to}>
+                        {/* Tooltip only on desktop-collapsed; touch devices don't hover */}
                         {collapsed ? (
                           <SidebarTooltip
                             label={item.label}
